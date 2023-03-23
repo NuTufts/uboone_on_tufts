@@ -4,12 +4,12 @@ We use a modified version of the "Full MC BNB" fhicl list on the [Production Wik
 
 These are:
 
-  1a. `prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts.fcl` (modified)
-  1b. `prodgenie_bnb_cosmic_uboone_on_tufts.fcl` (modified)
-  2. `wirecell_g4_uboone.fcl` (original)
-  3. `wirecell_detsim_uboone.fcl` (original)
-  4. `reco_uboone_mcc9_8_driver_stage1.fcl` (original)
-  5. `standard_larcv_uboone_mctruth_prod.fcl` (modified)
+    1a. `prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts.fcl` (modified)
+    1b. `prodgenie_bnb_cosmic_uboone_on_tufts.fcl` (modified)
+    2. `wirecell_g4_uboone.fcl` (original)
+    3. `wirecell_detsim_uboone.fcl` (original)
+    4. `reco_uboone_mcc9_8_driver_stage1.fcl` (original)
+    5. `standard_larcv_uboone_mctruth_prod.fcl` (modified)
 
 The modifications are the following.
 
