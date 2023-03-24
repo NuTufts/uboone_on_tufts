@@ -23,3 +23,10 @@ For `standard_larcv_uboone_mctruth_prod.fcl`, we convert more larsoft products i
 We have a run script and a submission script.
 
 
+## Notes
+
+To properly extract CRT hit info from the simulation, we need a modified litemaker, which is in the ublite repo.
+
+To build the repo on Tufts, we need to provide a missing export:
+
+   export IFDHC_INC=${IFDHC_FQ_DIR}/inc

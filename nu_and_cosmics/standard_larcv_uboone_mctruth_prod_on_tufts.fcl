@@ -48,7 +48,6 @@ physics:{
     stream1: [out]
 
     }
-physics.analyzers.superaMCTruthOnly.out_filename: "larcv_mctruth.root"
 
 # Define larlite+larcv analyzer sequence.
 
@@ -73,20 +72,6 @@ microboone_tfile_metadata:
   fileFormat:            [ "root", "root", "root", "root", "root", "root" ]
 }
 
-# physics.analyzers.mcinfo.DataLookUpMap.hit: ["gaushit"]
-# physics.analyzers.mcinfo.DataLookUpMap.opflash: [
-#   "simpleFlashBeam",		
-#   "simpleFlashCosmic",		
-#   "opflashBeam",
-#   "opflashCosmic" ]
-# physics.analyzers.mcinfo.DataLookUpMap.ophit: [
-#   "ophitBeam",
-#   "ophitCosmic"
-# ]
-# physics.analyzers.mcinfo.DataLookupMap.swtrigger: [
-#     "swtrigger"
-#             ]
-#             trigger: [
-#                "triggersim"
-#             ]
-#          }
+physics.analyzers.superaMCTruthOnly.out_filename: "larcv_mctruth.root"
+physics.analyzers.superaMCTruthOnly.supera_params: "supera_mctruthonly_on_tufts.fcl"
+physics.analyzers.crt.DataLookUpMap.crthit: ["crthitsim"]
