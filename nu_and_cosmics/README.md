@@ -27,6 +27,12 @@ For `standard_larcv_uboone_mctruth_prod.fcl`, we convert more larsoft products i
 
 We have a run script and a submission script.
 
+| Sample Type       | submission script        | run script            | base fcl file |
+| ----------------- | ------------------------ | --------------------- | ------------- |
+| BNB nue + Corsika | submit_bnbnue_corsika.sh | run_corsika_bnb_nu.sh | prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts.fcl |
+| BNB nue only      | submit_nue_only.sh       | run_bnb_nue_only.sh   | prodgenie_bnb_nue_uboone_on_tufts.fcl | 
+| BNB nu only       | 
+
 
 ## Notes
 

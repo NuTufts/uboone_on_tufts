@@ -3,24 +3,24 @@
 WORKDIR=/cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/nu_and_cosmics/
 UBOONECODE_VERSION=v08_00_00_40a_dl
 UBOONECODE_QUAL=e17:prof
-INPUTLIST=${WORKDIR}/corsika_bnb_nu.runlist
-OUTPUT_DIR=/cluster/tufts/wongjiradlabnu/larbys/data/ub_on_tufts/bnbnu_corsika/
+INPUTLIST=${WORKDIR}/bnb_nu_only.runlist
+OUTPUT_DIR=/cluster/tufts/wongjiradlabnu/larbys/data/ub_on_tufts/bnb_nu_only/
 
 NENTRIES=50
 
 OFFSET=0
-TAG=coriska_bnb_nu
+TAG=bnb_nu_only
 
 stride=5
 jobid=${SLURM_ARRAY_TASK_ID}
 let startline=$(expr "${OFFSET}+${stride}*${jobid}")
 
 mkdir -p $WORKDIR
-jobworkdir=`printf "%s/workdir/ubprod_on_tufts_${TAG}_jobid_%03d" $WORKDIR $jobid`
+jobworkdir=`printf "%s/workdir/prod_on_tufts_${TAG}_jobid_%03d" $WORKDIR $jobid`
 mkdir -p $jobworkdir
 mkdir -p $OUTPUT_DIR
 
-local_jobdir=`printf /tmp/mlreco_dataprep_${TAG}_jobid%03d $jobid`
+local_jobdir=`printf /tmp/prod_on_tufts_${TAG}_jobid%03d $jobid`
 rm -rf $local_jobdir
 mkdir -p $local_jobdir
 cd $local_jobdir
@@ -55,8 +55,8 @@ do
 
     # stage 1: generate cosmic and neutrino primaries
 
-    job_fcl=$(printf "prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts_file%d.fcl" ${fileno})
-    cp prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts.fcl $job_fcl
+    job_fcl=$(printf "prodgenie_bnb_nu_uboone_on_tufts_file%d.fcl" ${fileno})
+    cp prodgenie_bnb_nu_uboone_on_tufts.fcl $job_fcl
     echo "prodgenie job fcl: ${job_fcl}"
     echo "source.firstEvent: 1" >> $job_fcl
     echo "source.firstRun: ${fileno}" >> $job_fcl
@@ -102,7 +102,7 @@ do
     let nsubdir1=$(expr "${fileno}/1000")
     zsubdir1=`printf %03d ${nsubdir1}`
 
-    let subdir2=$(expr "${fileno}/100")
+    let nsubdir2=$(expr "${fileno}/100")
     zsubdir2=`printf %03d ${nsubdir2}`
 
     outfolder=${OUTPUT_DIR}/${zsubdir1}/${zsubdir2}/

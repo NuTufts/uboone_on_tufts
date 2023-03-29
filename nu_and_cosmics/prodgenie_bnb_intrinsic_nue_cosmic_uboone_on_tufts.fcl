@@ -22,3 +22,5 @@ physics.producers.corsika.ShowerInputFiles: [
 ]
 
 physics.producers.generator.FluxSearchPaths: "/cluster/tufts/wongjiradlabnu/larbys/uboone/bnb_gsimple/bnb_gsimple_fluxes_01.09.2019_463/"
+
+source.maxEvents: 50
