@@ -31,7 +31,7 @@ We have a run script and a submission script.
 | ----------------- | ------------------------ | --------------------- | ------------- |
 | BNB nue + Corsika | submit_bnbnue_corsika.sh | run_corsika_bnb_nu.sh | prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts.fcl |
 | BNB nue only      | submit_nue_only.sh       | run_bnb_nue_only.sh   | prodgenie_bnb_nue_uboone_on_tufts.fcl | 
-| BNB nu only       | 
+| BNB nu only       | submit_nu_only.sh        | run_bnb_nu_only.sh    | prodgenie_bnb_nu_uboone_on_tufts.fcl |
 
 
 ## Notes
@@ -40,4 +40,4 @@ To properly extract CRT hit info from the simulation, we need a modified litemak
 
 To build the repo on Tufts, we need to provide a missing export:
 
-   export IFDHC_INC=${IFDHC_FQ_DIR}/inc
+    export IFDHC_INC=${IFDHC_FQ_DIR}/inc
