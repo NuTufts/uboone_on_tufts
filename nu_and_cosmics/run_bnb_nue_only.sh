@@ -86,7 +86,7 @@ do
     echo "Created reco1 file: ${reco1file}"
 
     # stage 5: conver to larcv and larlite
-    lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES >> $local_logfile
+    lar -c standard_larcv_uboone_mctruth_prod_on_tufts2.fcl -s $reco1file -n $NENTRIES >> $local_logfile
 
     # merge larcv and larlite file
     # for larlite files, we need to remove larlite_id_tree,
