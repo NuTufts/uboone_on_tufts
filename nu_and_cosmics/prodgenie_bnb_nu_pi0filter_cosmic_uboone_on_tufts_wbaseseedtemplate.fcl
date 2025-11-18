@@ -1,0 +1,49 @@
+#include "prodgenie_common_cosmic_uboone.fcl"
+
+process_name: GenieGen
+
+outputs.out1.fileName: "prodgenie_bnb_intrinsic_nue_cosmic_uboone_%tc_gen.root"
+
+physics.simulate: ["rns","generator","corsika","finalstatefilter"]
+
+physics.producers.generator: @local::microboone_genie_simple
+#physics.producers.generator.EventGeneratorList: "CCinclMEC"
+physics.producers.generator.GlobalTimeOffset: 3125.
+physics.producers.generator.RandomTimeOffset: 1600.
+physics.producers.generator.TopVolume: "volTPCActive"
+physics.producers.generator.GenFlavors: [12,-12,14,-14]
+physics.producers.generator.BeamName: "booster"
+
+physics.producers.corsika.ShowerInputFiles: [
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/p_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/He_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/N_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/Mg_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/Fe_showers_*.db"
+]
+
+physics.producers.generator.FluxSearchPaths: "/cluster/tufts/wongjiradlabnu/larbys/uboone/bnb_gsimple/bnb_gsimple_fluxes_01.09.2019_463/"
+
+physics.filters.neutrinofilter.module_type: "NeutrinoTruthFilter"
+physics.filters.neutrinofilter.module_label: "neutrinofilter"
+physics.filters.neutrinofilter.EMax: 1e9
+physics.filters.neutrinofilter.EMin: -1
+physics.filters.neutrinofilter.MCTruthLabel: "generator"
+
+physics.filters.finalstatefilter.module_type: "FinalStateSelectFilter"
+physics.filters.finalstatefilter.module_label: "finalstatefilter"
+physics.filters.finalstatefilter.GenieModuleLabel: "generator"
+physics.filters.finalstatefilter.IsVerbose: false
+physics.filters.finalstatefilter.isInclusive: true
+physics.filters.finalstatefilter.PDG: [111] #NC PiZero
+physics.filters.finalstatefilter.PDGCount: [1]
+physics.filters.finalstatefilter.PDGCountExclusivity: [true]
+
+source.maxEvents: 20
+
+# For info on configuring seed see: $NUTOOLS_DIR/source/nutools/RandomUtils/Providers/SeedMaster.h
+services.NuRandomService.policy: "linearMapping"
+services.NuRandomService.maxUniqueEngines: 20
+services.NuRandomService.checkRange: true
+#services.NuRandomService.nJob: __TEMPLATE_SEED_NJOB__
+services.NuRandomService.nJob: 1000

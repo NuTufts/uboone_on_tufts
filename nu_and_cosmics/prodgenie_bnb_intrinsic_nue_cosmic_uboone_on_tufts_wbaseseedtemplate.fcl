@@ -1,0 +1,32 @@
+#include "prodgenie_common_cosmic_uboone.fcl"
+
+process_name: GenieGen
+
+outputs.out1.fileName: "prodgenie_bnb_intrinsic_nue_cosmic_uboone_%tc_gen.root"
+
+
+physics.producers.generator: @local::microboone_genie_simple
+physics.producers.generator.EventGeneratorList: "CCinclMEC"
+physics.producers.generator.GlobalTimeOffset: 3125.
+physics.producers.generator.RandomTimeOffset: 1600.
+physics.producers.generator.TopVolume: "volTPCActive"
+physics.producers.generator.GenFlavors: [12,-12]
+physics.producers.generator.BeamName: "booster"
+
+physics.producers.corsika.ShowerInputFiles: [
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/p_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/He_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/N_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/Mg_showers_*.db",
+  "/cluster/tufts/wongjiradlabnu/larbys/uboone/corsika/sqShowers/Fe_showers_*.db"
+]
+
+physics.producers.generator.FluxSearchPaths: "/cluster/tufts/wongjiradlabnu/larbys/uboone/bnb_gsimple/bnb_gsimple_fluxes_01.09.2019_463/"
+
+source.maxEvents: 20
+
+# For info on configuring seed see: $NUTOOLS_DIR/source/nutools/RandomUtils/Providers/SeedMaster.h
+services.NuRandomService.policy: "linearMapping"
+services.NuRandomService.maxUniqueEngines: 20
+services.NuRandomService.checkRange: true
+services.NuRandomService.nJob: __TEMPLATE_SEED_NJOB__

@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --job-name=ubprod
-#SBATCH --output=logs/gridlog_ubprod.%j.%A_%a.%N.log
+#SBATCH --output=logs/bnbnu_pi0_corsika/gridlog_ubprod.%j.%A_%a.%N.log
 #SBATCH --mem-per-cpu=8000
 #SBATCH --cpus-per-task=1
 #SBATCH --time=4-00:00:00
 #SBATCH --partition=batch
-#SBATCH --error=logs/griderr_ubprod.%j.%A_%a.%N.err
-#SBATCH --array=10-99
+#SBATCH --error=logs/bnbnu_pi0_corsika/griderr_ubprod.%j.%A_%a.%N.err
+#SBATCH --array=0
 
 # set the location of your copy of the repo here
 WORKDIR=/cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/nu_and_cosmics
@@ -23,5 +23,5 @@ module load apptainer/1.2.4-suid
 cvmfs_config probe fermilab.opensciencegrid.org uboone.opensciencegrid.org
 
 # run job script inside container
-apptainer exec --bind /cluster:/cluster,/cvmfs:/cvmfs $container bash -c "cd ${WORKDIR} && source ${WORKDIR}/run_corsika_bnb_nue.sh"
+apptainer exec --bind /cluster:/cluster,/cvmfs:/cvmfs $container bash -c "cd ${WORKDIR} && source ${WORKDIR}/run_corsika_bnb_nu_pi0.sh"
 

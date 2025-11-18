@@ -38,6 +38,15 @@ We have a run script and a submission script.
 
 To properly extract CRT hit info from the simulation, we need a modified litemaker, which is in the ublite repo.
 
+To build, use MRB version `v3_05_03`. So to setup the build environment for uboonecode `v08_00_00_29e_dl`:
+
+
+   '''
+   setup mrb v3_05_03
+   mrb newDev -v v08_05_00_10 -q e17:prof
+   '''
+
+
 To build the repo on Tufts, we need to provide a missing export:
 
     export IFDHC_INC=${IFDHC_FQ_DIR}/inc
