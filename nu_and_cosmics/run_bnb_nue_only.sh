@@ -46,6 +46,8 @@ ls >> $local_logfile
 
 for i in {1..5}
 do
+    # refresh cvmfs
+    cvmfs_config probe fermilab.opensciencegrid.org uboone.opensciencegrid.org
 
     let lineno=$startline+$i
 

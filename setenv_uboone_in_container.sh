@@ -4,6 +4,7 @@ echo "activating the microboone larsoft software repo on CVMFS"
 echo "this needs to be run inside the SL7 container"
 echo "(start container using: source start_sl7_container.sh)"
 
+export UPS_OVERRIDE="-H Linux64bit+3.10-2.17"
 source /cvmfs/uboone.opensciencegrid.org/products/setup_uboone.sh
 
 echo "setup the MicroBooNE larsoft environment using command such as:"

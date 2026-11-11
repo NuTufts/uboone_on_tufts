@@ -73,5 +73,6 @@ microboone_tfile_metadata:
 }
 
 physics.analyzers.superaMCTruthOnly.out_filename: "larcv_mctruth.root"
-physics.analyzers.superaMCTruthOnly.supera_params: "supera_mctruthonly_on_tufts.fcl"
+#physics.analyzers.superaMCTruthOnly.supera_params: "supera_mctruthonly_on_tufts.fcl"
+physics.analyzers.superaMCTruthOnly.supera_params: "supera_mctruthonly_on_tufts_reduced.fcl"
 physics.analyzers.crt.DataLookUpMap.crthit: ["crthitsim"]

@@ -5,7 +5,8 @@ UBOONECODE_VERSION=v08_00_00_40a_dl
 UBOONECODE_QUAL=e17:prof
 DEV_UBOONECODE_FOLDER=v08_00_00_40a_dl
 INPUTLIST=${WORKDIR}/corsika_bnb_nue.runlist
-OUTPUT_DIR=/cluster/tufts/wongjiradlabnu/larbys/data/ub_on_tufts/bnb_nue_corsika/
+OUTPUT_DIR=/cluster/tufts/wongjiradlab/larbys/data/ub_on_tufts/bnb_nue_corsika/
+GEN_FCL=prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts_wbaseseedtemplate.fcl
 
 NENTRIES=20
 
@@ -60,7 +61,7 @@ do
 
     job_fcl=$(printf "prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts_file%d.fcl" ${fileno})
     JOBGENSEED=$((10000 + ${fileno}))
-    sed "s/__TEMPLATE_SEED_NJOB__/${JOBGENSEED}/g" prodgenie_bnb_intrinsic_nue_cosmic_uboone_on_tufts_wbaseseedtemplate.fcl > $job_fcl
+    sed "s/__TEMPLATE_SEED_NJOB__/${JOBGENSEED}/g" $GEN_FCL > $job_fcl
     echo "" >> ${job_fcl}
     echo "prodgenie job fcl: ${job_fcl}"
     echo "source.firstEvent: 1" >> $job_fcl
@@ -110,7 +111,8 @@ do
 
     # stage 5: conver to larcv and larlite
     #lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES >> $local_logfile
-    lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
+    #lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
+    lar -c standard_larcv_uboone_mctruth_prod_on_tufts_wcsimch.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
     head -n 100 log_larcv.txt >> $local_logfile
     tail -n 100 log_larcv.txt >> $local_logfile
     rm log_larcv.txt
@@ -129,7 +131,7 @@ do
     let nsubdir1=$(expr "${fileno}/1000")
     zsubdir1=`printf %03d ${nsubdir1}`
 
-    let subdir2=$(expr "${fileno}/100")
+    let nsubdir2=$(expr "${fileno}/100")
     zsubdir2=`printf %03d ${nsubdir2}`
 
     outfolder=${OUTPUT_DIR}/${zsubdir1}/${zsubdir2}/

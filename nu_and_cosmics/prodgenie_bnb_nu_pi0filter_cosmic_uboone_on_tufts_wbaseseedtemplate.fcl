@@ -2,12 +2,12 @@
 
 process_name: GenieGen
 
-outputs.out1.fileName: "prodgenie_bnb_intrinsic_nue_cosmic_uboone_%tc_gen.root"
-
 physics.simulate: ["rns","generator","corsika","finalstatefilter"]
 
+outputs.out1.fileName: "prodgenie_bnb_nu_pi0_cosmic_uboone_%tc_gen.root"
+outputs.out1.SelectEvents: ["simulate"]
+
 physics.producers.generator: @local::microboone_genie_simple
-#physics.producers.generator.EventGeneratorList: "CCinclMEC"
 physics.producers.generator.GlobalTimeOffset: 3125.
 physics.producers.generator.RandomTimeOffset: 1600.
 physics.producers.generator.TopVolume: "volTPCActive"
@@ -33,17 +33,16 @@ physics.filters.neutrinofilter.MCTruthLabel: "generator"
 physics.filters.finalstatefilter.module_type: "FinalStateSelectFilter"
 physics.filters.finalstatefilter.module_label: "finalstatefilter"
 physics.filters.finalstatefilter.GenieModuleLabel: "generator"
-physics.filters.finalstatefilter.IsVerbose: false
+physics.filters.finalstatefilter.IsVerbose: true
 physics.filters.finalstatefilter.isInclusive: true
 physics.filters.finalstatefilter.PDG: [111] #NC PiZero
 physics.filters.finalstatefilter.PDGCount: [1]
-physics.filters.finalstatefilter.PDGCountExclusivity: [true]
+physics.filters.finalstatefilter.PDGCountExclusivity: [false]
 
-source.maxEvents: 20
+source.maxEvents: 50
 
 # For info on configuring seed see: $NUTOOLS_DIR/source/nutools/RandomUtils/Providers/SeedMaster.h
 services.NuRandomService.policy: "linearMapping"
-services.NuRandomService.maxUniqueEngines: 20
+services.NuRandomService.maxUniqueEngines: 50
 services.NuRandomService.checkRange: true
-#services.NuRandomService.nJob: __TEMPLATE_SEED_NJOB__
-services.NuRandomService.nJob: 1000
+services.NuRandomService.nJob: __TEMPLATE_SEED_NJOB__

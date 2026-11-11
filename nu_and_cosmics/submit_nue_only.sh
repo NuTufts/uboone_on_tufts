@@ -5,9 +5,9 @@
 #SBATCH --mem-per-cpu=8000
 #SBATCH --cpus-per-task=1
 #SBATCH --time=4-00:00:00
-#SBATCH --partition=batch,preempt
+#SBATCH --partition=batch
 #SBATCH --error=logs/griderr_nueonly_prod.%j.%A_%a.%N.err
-#SBATCH --array=500-999
+#SBATCH --array=1500-1999
 
 # set the location of your copy of the repo here
 WORKDIR=/cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/nu_and_cosmics

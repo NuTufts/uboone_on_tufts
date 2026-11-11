@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --job-name=ubprod
-#SBATCH --output=logs/gridlog_ubprod.%j.%A_%a.%N.log
+#SBATCH --output=logs/bnb_nue_corsika/gridlog_ubprod.%j.%A_%a.%N.log
 #SBATCH --mem-per-cpu=8000
 #SBATCH --cpus-per-task=1
 #SBATCH --time=4-00:00:00
 #SBATCH --partition=batch
-#SBATCH --error=logs/griderr_ubprod.%j.%A_%a.%N.err
-#SBATCH --array=10-99
+#SBATCH --error=logs/bnb_nue_corsika/griderr_ubprod.%j.%A_%a.%N.err
+#SBATCH --array=200-999
 
 # set the location of your copy of the repo here
 WORKDIR=/cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/nu_and_cosmics

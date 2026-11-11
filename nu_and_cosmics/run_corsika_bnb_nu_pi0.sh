@@ -5,15 +5,15 @@ UBOONECODE_VERSION=v08_00_00_40a_dl
 UBOONECODE_QUAL=e17:prof
 DEV_UBOONECODE_FOLDER=v08_00_00_40a_dl
 INPUTLIST=${WORKDIR}/corsika_bnb_nu_pi0.runlist
-OUTPUT_DIR=/cluster/tufts/wongjiradlab/larbys/data/ub_on_tufts/bnb_nu_pi0_corsika/
+OUTPUT_DIR=/cluster/tufts/wongjiradlab/larbys/data/ub_on_tufts/bnb_nu_pi0filter_corsika/
 GEN_FCL=prodgenie_bnb_nu_pi0filter_cosmic_uboone_on_tufts_wbaseseedtemplate.fcl
 
 NENTRIES=50
 
-OFFSET=0
-TAG=coriska_bnb_nu_pi0
+OFFSET=500
+TAG=coriska_bnb_nu_pi0filter
 
-stride=5
+stride=20
 jobid=${SLURM_ARRAY_TASK_ID}
 let startline=$(expr "${OFFSET}+${stride}*${jobid}")
 
@@ -48,7 +48,7 @@ cp $WORKDIR/*.fcl .
 
 ls >> $local_logfile
 
-for i in {1..5}
+for i in {1..20}
 do
 
     let lineno=$startline+$i
@@ -111,7 +111,8 @@ do
 
     # stage 5: conver to larcv and larlite
     #lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES >> $local_logfile
-    lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
+    #lar -c standard_larcv_uboone_mctruth_prod_on_tufts.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
+    lar -c standard_larcv_uboone_mctruth_prod_on_tufts_wcsimch.fcl -s $reco1file -n $NENTRIES > log_larcv.txt
     head -n 100 log_larcv.txt >> $local_logfile
     tail -n 100 log_larcv.txt >> $local_logfile
     rm log_larcv.txt
@@ -130,7 +131,7 @@ do
     let nsubdir1=$(expr "${fileno}/1000")
     zsubdir1=`printf %03d ${nsubdir1}`
 
-    let subdir2=$(expr "${fileno}/100")
+    let nsubdir2=$(expr "${fileno}/100")
     zsubdir2=`printf %03d ${nsubdir2}`
 
     outfolder=${OUTPUT_DIR}/${zsubdir1}/${zsubdir2}/
