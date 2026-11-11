@@ -1,3 +1,21 @@
 *~
 *.root
 *.db
+# build areas, job logs, per-job work dirs (large; not source)
+nu_and_cosmics/dev/
+nu_and_cosmics/logs/
+nu_and_cosmics/workdir/
+work/
+singcvmfs-logs/
+ubprod_on_tufts_*/
+temp_*
+bak_*
+*.log
+*.err
+*.out
+core.*
+.#*
+# scratch dumps
+nu_and_cosmics/aho
+nu_and_cosmics/baka*
+nu_and_cosmics/dump
