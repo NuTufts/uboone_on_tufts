@@ -1,0 +1,227 @@
+From afe6f251102bf9d6b1f813a9e91f2ec684954bd2 Mon Sep 17 00:00:00 2001
+From: twongjirad <taritree.wongjirad@gmail.com>
+Date: Wed, 11 Nov 2026 14:45:24 -0500
+Subject: [PATCH] Tufts sim production: all-plane SimChannel with IDE xyz; CRT
+ hit/track scan without DAQ header
+
+Changes used to make the Tufts corsika+BNB training samples
+(NuTufts/uboone_on_tufts, nu_and_cosmics), built against
+uboonecode v08_00_00_40a_dl e17:prof.
+
+- ScannerAlgo.template.h: keep SimChannels for all three planes (drop the
+  Channel() < 4800 skip that kept only the Y plane) and fill the larlite
+  IDE x,y,z. Add ScanData specializations for crt::CRTHit and
+  crt::CRTTrack that do not need a DAQHeaderTimeUBooNE.
+- LiteScanner_module.cc: ScanDataCRT falls back to the no-GPS-time
+  ScanData path when the DAQ header is missing (pure MC) instead of
+  returning without storing CRT products.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0194U1FJGCJZxLC7jZ9YgfZs
+---
+ ublite/LiteMaker/LiteScanner_module.cc  |  32 ++++++--
+ ublite/LiteMaker/ScannerAlgo.template.h | 102 ++++++++++++++++++++++--
+ 2 files changed, 121 insertions(+), 13 deletions(-)
+
+diff --git a/ublite/LiteMaker/LiteScanner_module.cc b/ublite/LiteMaker/LiteScanner_module.cc
+index 3d48b840..513ace54 100644
+--- a/ublite/LiteMaker/LiteScanner_module.cc
++++ b/ublite/LiteMaker/LiteScanner_module.cc
+@@ -639,7 +639,8 @@ template<class T> void LiteScanner::ScanData(const art::Event& evt, const size_t
+     art::InputTag inputtag(label);
+     evt.getByLabel(inputtag, dh);
+ 
+-    if(dh.isValid()) fAlg.ScanData(dh,lite_data);
++    if(dh.isValid()) 
++      fAlg.ScanData(dh,lite_data);
+ 
+     for ( unsigned int cat=0; cat<(unsigned int)opdet::NumUBOpticalChannelCategories; cat++ ) {
+       
+@@ -655,7 +656,10 @@ template<class T> void LiteScanner::ScanData(const art::Event& evt, const size_t
+     art::InputTag inputtag(label);
+     evt.getByLabel(inputtag, dh);
+     
+-    if(!dh.isValid()) return;
++    if(!dh.isValid())  {
++      std::cout << "Skip scanning of data with label=" << label << std::endl;
++      return;
++    }
+     fAlg.ScanData(dh,lite_data);
+   }
+ }
+@@ -681,20 +685,32 @@ template<class T> void LiteScanner::ScanDataCRT(const art::Event& evt, const siz
+   art::InputTag inputtag2(fDAQHeaderTimeUBooNE);
+   evt.getByLabel(inputtag2, ddh);
+   
+-  if(!dh.isValid() || !ddh.isValid()) {
++  if(!dh.isValid()) {
+     std::stringstream msg;
+     msg << "[" << __FILE__ << ".L" << __LINE__ << "::" << __FUNCTION__ << "] "
+-	<< "invalid handles. crthit/track=" << dh.isValid() << " daqheader=" << ddh.isValid()
++	<< "invalid handles. crthit/track=" << dh.isValid() 
+ 	<< std::endl;
+     std::cout << "[WARNING]: " << msg.str();
+     //throw cet::exception(msg.str());
+     return;
+   }
+-  // std::cout << "[" << __FILE__ << ".L" << __LINE__ << "::" << __FUNCTION__ << "] "
+-  // 	    << " run ScanDataTest(crthit/track,daqheader,lite_data)"
+-  // 	    << std::endl;
+-  fAlg.ScanDataTest(dh,ddh,lite_data);
++  
++  if ( !ddh.isValid()) {
++    std::stringstream msg;
++    msg << "[" << __FILE__ << ".L" << __LINE__ << "::" << __FUNCTION__ << "] " << " invalid daqheader=" << ddh.isValid()
++	<< " Process without gps time."
++	<< std::endl;
++    std::cout << "[WARNING]: " << msg.str();
++    fAlg.ScanData(dh,lite_data);
++  }
++  else {
++    std::cout << "[" << __FILE__ << ".L" << __LINE__ << "::" << __FUNCTION__ << "] "
++	      << " run ScanDataTest(crthit/track,daqheader,lite_data)"
++	      << std::endl;
++    fAlg.ScanDataTest(dh,ddh,lite_data);
++  }
+ 
++  return;
+ }
+ //
+ template<class T> void LiteScanner::ScanDataDAQTime(const art::Event& evt, const size_t name_index)
+diff --git a/ublite/LiteMaker/ScannerAlgo.template.h b/ublite/LiteMaker/ScannerAlgo.template.h
+index 1bad8a1e..483349bf 100644
+--- a/ublite/LiteMaker/ScannerAlgo.template.h
++++ b/ublite/LiteMaker/ScannerAlgo.template.h
+@@ -487,8 +487,8 @@ namespace larlite {
+       
+       const art::Ptr<::sim::SimChannel> sch_ptr(dh,i);
+ 
+-      if ( sch_ptr->Channel() < 4800 ) continue;
+-      const auto & sch_map(sch_ptr->TDCIDEMap());
++      //if ( sch_ptr->Channel() < 4800 ) continue; // why?
++      const auto & sch_map = sch_ptr->TDCIDEMap();
+       
+       larlite::simch lite_sch;
+       lite_sch.set_channel(sch_ptr->Channel());
+@@ -503,9 +503,11 @@ namespace larlite {
+ 	  lite_ide.trackID = this_ide.trackID;
+ 	  lite_ide.numElectrons = this_ide.numElectrons;
+ 	  lite_ide.energy = this_ide.energy;
+-	  //lite_ide.x = this_ide.x;
+-	  //lite_ide.y = this_ide.y;
+-	  //lite_ide.z = this_ide.z;
++	  lite_ide.x = this_ide.x;
++	  lite_ide.y = this_ide.y;
++	  lite_ide.z = this_ide.z;
++
++	  //std::cout << "new ide: " << lite_ide.x << ", " << lite_ide.y << ", " << lite_ide.z << std::endl;
+ 	  
+ 	  lite_sch.add_ide(tdc,lite_ide);
+ 	}
+@@ -945,6 +947,42 @@ namespace larlite {
+     }
+   }
+ 
++  template <>
++  void ScannerAlgo::ScanData(art::Handle<std::vector<::crt::CRTHit> > const &dh,
++			     ::larlite::event_base* lite_dh)
++  { 
++
++    fDataReadFlag_v[lite_dh->data_type()][lite_dh->name()] = true;  
++
++    auto lite_data = (::larlite::event_crthit*)lite_dh;
++
++    for(size_t i=0; i<dh->size(); ++i) {
++      
++      art::Ptr<::crt::CRTHit> hit_ptr(dh,i);
++      
++      ::larlite::crthit lite_hit;
++      lite_hit.feb_id = hit_ptr->feb_id;
++      lite_hit.pesmap = hit_ptr->pesmap;
++      lite_hit.peshit =  hit_ptr->peshit;
++      lite_hit.ts0_s =  hit_ptr->ts0_s;
++      lite_hit.ts0_ns =  hit_ptr->ts0_ns;
++      lite_hit.ts0_s_corr =  hit_ptr->ts0_s_corr;
++      lite_hit.ts0_ns_corr =  hit_ptr->ts0_ns_corr;
++      lite_hit.ts1_ns =  hit_ptr->ts1_ns;
++      lite_hit.plane =  hit_ptr->plane;
++      lite_hit.x_pos =  hit_ptr->x_pos;
++      lite_hit.x_err =  hit_ptr->x_err;
++      lite_hit.y_pos =  hit_ptr->y_pos;
++      lite_hit.y_err =  hit_ptr->y_err;
++      lite_hit.z_pos =  hit_ptr->z_pos;
++      lite_hit.z_err =  hit_ptr->z_err;
++      lite_hit.ts2_ns = hit_ptr->ts0_ns + fCRTTOffset; 
++      //fPtrIndex_ophit[hit_ptr] = std::make_pair(lite_data->size(),name_index);
++      
++      lite_data->push_back(lite_hit);
++    }
++  }
++
+   template <>
+   void ScannerAlgo::ScanDataTest(art::Handle<std::vector< ::crt::CRTTrack> > const &dh,
+ 				 art::Handle<::raw::DAQHeaderTimeUBooNE> const &ddh,
+@@ -1001,6 +1039,60 @@ namespace larlite {
+     }
+ 
+   }
++
++  template <>
++  void ScannerAlgo::ScanData(art::Handle<std::vector< ::crt::CRTTrack> > const &dh,
++			     ::larlite::event_base* lite_dh)
++  { 
++
++    fDataReadFlag_v[lite_dh->data_type()][lite_dh->name()] = true;  
++
++    auto lite_data = (::larlite::event_crttrack*)lite_dh;
++
++    for(size_t i=0; i<dh->size(); ++i) {
++      
++      art::Ptr<::crt::CRTTrack> trk_ptr(dh,i);
++      
++      ::larlite::crttrack lite_trk;
++      lite_trk.feb_id = trk_ptr->feb_id;
++      lite_trk.pesmap = trk_ptr->pesmap;
++      lite_trk.peshit =  trk_ptr->peshit;
++      lite_trk.ts0_s =  trk_ptr->ts0_s;
++      lite_trk.ts0_ns =  trk_ptr->ts0_ns;
++      lite_trk.ts0_s_err =  trk_ptr->ts0_s_err;
++      lite_trk.ts0_ns_err =  trk_ptr->ts0_ns_err;
++      lite_trk.ts1_ns =  trk_ptr->ts1_ns;
++      lite_trk.ts1_ns_err =  trk_ptr->ts1_ns_err;
++      lite_trk.plane1 =  trk_ptr->plane1;
++      lite_trk.plane2 =  trk_ptr->plane2;
++      lite_trk.x1_pos =  trk_ptr->x1_pos;
++      lite_trk.x1_err =  trk_ptr->x1_err;
++      lite_trk.y1_pos =  trk_ptr->y1_pos;
++      lite_trk.y1_err =  trk_ptr->y1_err;
++      lite_trk.z1_pos =  trk_ptr->z1_pos;
++      lite_trk.z1_err =  trk_ptr->z1_err;
++      lite_trk.x2_pos =  trk_ptr->x2_pos;
++      lite_trk.x2_err =  trk_ptr->x2_err;
++      lite_trk.y2_pos =  trk_ptr->y2_pos;
++      lite_trk.y2_err =  trk_ptr->y2_err;
++      lite_trk.z2_pos =  trk_ptr->z2_pos;
++      lite_trk.z2_err =  trk_ptr->z2_err;
++      lite_trk.length =  trk_ptr->length;
++      lite_trk.thetaxy=  trk_ptr->thetaxy;
++      lite_trk.phiz   =  trk_ptr->phizy;
++      lite_trk.ts0_ns_h1 =  trk_ptr->ts0_ns_h1;
++      lite_trk.ts0_ns_err_h1 =  trk_ptr->ts0_ns_err_h1;
++      lite_trk.ts0_ns_h2 =  trk_ptr->ts0_ns_h2;
++      lite_trk.ts0_ns_err_h2 =  trk_ptr->ts0_ns_err_h2;
++      lite_trk.ts2_ns_h1 =  trk_ptr->ts0_ns_h1 + fCRTTOffset;
++      lite_trk.ts2_ns_h2 =  trk_ptr->ts0_ns_h2 + fCRTTOffset;
++      //fPtrIndex_ophit[hit_ptr] = std::make_pair(lite_data->size(),name_index);
++      
++      lite_data->push_back(lite_trk);
++    }
++
++  }
++
+   
+   template <>
+   void ScannerAlgo::ScanData(art::Handle<std::vector< ::recob::Cluster> > const &dh,
+-- 
+2.47.3
+
