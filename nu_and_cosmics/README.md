@@ -28,8 +28,10 @@ Two files in `ublite/LiteMaker` (a copy of the commit is in
 * `ScannerAlgo.template.h`
   * `sim::SimChannel` -> `larlite::simch`: keep **all three planes** (the stock code
     skipped channels < 4800, i.e. kept only the Y plane) and fill the IDE
-    **x, y, z** (commented out in the stock code). This gives the true 3D position of
-    every energy deposit directly, which is what the training labels are built from.
+    **x, y, z** (commented out in the stock code). Note: for the WireCell
+    `driftWC:simpleSC` SimChannels used in production only y and z are true deposit
+    coordinates; x holds the wire/response-plane position (-0.6..0 cm), so the drift
+    coordinate has to come from the TDC (see `../wireplane_extract/README.md`).
   * new `ScanData` specializations for `crt::CRTHit` and `crt::CRTTrack` that do not
     need a `raw::DAQHeaderTimeUBooNE`.
 * `LiteScanner_module.cc`: `ScanDataCRT` falls back to that no-GPS-time path when the
@@ -90,8 +92,8 @@ Our modifications to the fcls:
   `driftWC:simpleSC:Detsim`; supera config `supera_mctruthonly_on_tufts_reduced.fcl`.
 * `supera_mctruthonly_on_tufts_reduced.fcl`: `supera_mctruthonly_on_tufts.fcl` minus
   `SuperaInstanceImage` and `SuperaLArFlow`. Those images were a way to recover 3D
-  truth positions at the image level; with IDE x,y,z in the simch stream they are not
-  needed.
+  truth positions at the image level; with IDE positions in the simch stream they are
+  not needed.
 
 ## Samples used for training
 
