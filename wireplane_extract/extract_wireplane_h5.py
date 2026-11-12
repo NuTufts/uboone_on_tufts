@@ -8,7 +8,11 @@ Products (defaults are the tags of the Tufts v08_00_00_40a_dl production):
   rawdigit   raw::RawDigit            driftWC:orig:Detsim     simulated raw waveforms
   wire       recob::Wire              butcher::McRecoStage1   deconvolved waveforms
   simch      sim::SimChannel          driftWC:simpleSC:Detsim ionization arriving on wires
-  edep       sim::SimEnergyDeposit    ionization::G4EDep      3D energy deposits
+  edep       sim::SimEnergyDeposit    largeant:TPCActive:G4EDep  3D energy deposits, true positions
+  edep_sce   sim::SimEnergyDeposit    ionization::G4EDep      same deposits after ShiftEdepSCE: positions
+                                                              moved by the space-charge map, electrons
+                                                              after recombination (the WireCell drift input)
+  chstatus   std::vector<int>         simnfspl1:badchannels / badmasks (McRecoStage1)  dead-channel mask
   particles  simb::MCParticle         largeant::G4EDep        track-ID lookup table
 
 See README.md for the schema.
@@ -46,7 +50,10 @@ def main():
     ap.add_argument("--rawdigit-tag", default="driftWC:orig:Detsim")
     ap.add_argument("--wire-tag", default="butcher::McRecoStage1", help="'' to skip")
     ap.add_argument("--simch-tag", default="driftWC:simpleSC:Detsim")
-    ap.add_argument("--edep-tag", default="ionization::G4EDep")
+    ap.add_argument("--edep-tag", default="largeant:TPCActive:G4EDep", help="true positions; '' to skip")
+    ap.add_argument("--edep-sce-tag", default="ionization::G4EDep", help="SCE-shifted; '' to skip")
+    ap.add_argument("--badch-tag", default="simnfspl1:badchannels:McRecoStage1", help="'' to skip")
+    ap.add_argument("--badmask-tag", default="simnfspl1:badmasks:McRecoStage1", help="'' to skip")
     ap.add_argument("--particle-tag", default="largeant::G4EDep", help="'' to skip")
     ap.add_argument("--tdc-offset", type=int, default=4900,
                     help="simch/tick = tdc - offset (RawDigit tick of the charge arrival). "
@@ -78,6 +85,9 @@ def main():
     fout.attrs["wire_tag"] = args.wire_tag
     fout.attrs["simch_tag"] = args.simch_tag
     fout.attrs["edep_tag"] = args.edep_tag
+    fout.attrs["edep_sce_tag"] = args.edep_sce_tag
+    fout.attrs["badch_tag"] = args.badch_tag
+    fout.attrs["badmask_tag"] = args.badmask_tag
     fout.attrs["particle_tag"] = args.particle_tag
     fout.attrs["plane_first_channel"] = np.array(UB_PLANE_FIRST_CHANNEL, dtype=np.int32)
     fout.attrs["plane_nwires"] = np.array(UB_PLANE_NWIRES, dtype=np.int32)
@@ -132,20 +142,42 @@ def main():
         gs.create_dataset("tick", data=(tdc - args.tdc_offset).astype(np.int32), **gz)
         nide = n
 
+        # ---- channel status (WireCell noise-filter masks used by the signal processing)
+        nbad = -1
+        if args.badch_tag:
+            nbad = rd.loadIntVector(*tag(args.badch_tag))
+            if nbad >= 0:
+                bad = np.zeros(nbad, dtype=np.int32)
+                rd.fillIntVector(addr(bad))
+                gc = g.create_group("chstatus")
+                gc.create_dataset("bad_channels", data=bad)
+                dead = np.zeros(nch, dtype=np.uint8)
+                dead[bad[(bad >= 0) & (bad < nch)]] = 1
+                gc.create_dataset("dead", data=dead)
+                nm = rd.loadIntVector(*tag(args.badmask_tag)) if args.badmask_tag else -1
+                if nm >= 0 and nm % 3 == 0:
+                    masks = np.zeros(nm, dtype=np.int32)
+                    rd.fillIntVector(addr(masks))
+                    gc.create_dataset("bad_masks", data=masks.reshape(-1, 3))
+
         # ---- energy deposits
-        n = rd.loadEnergyDeposits(*tag(args.edep_tag))
-        tid, pdg, ne, nph = [np.zeros(n, dtype=np.int32) for _ in range(4)]
-        en = np.zeros(n, dtype=np.float32)
-        st = np.zeros((n, 3), dtype=np.float32); ed = np.zeros((n, 3), dtype=np.float32)
-        tt = np.zeros((n, 2), dtype=np.float64)
-        rd.fillEnergyDeposits(*[addr(a) for a in (tid, pdg, ne, nph, en, st, ed, tt)])
-        ge = g.create_group("edep")
-        for name, a in (("track_id", tid), ("pdg", pdg), ("num_electrons", ne), ("num_photons", nph),
-                        ("energy", en), ("start_xyz", st), ("end_xyz", ed)):
-            ge.create_dataset(name, data=a, **gz)
-        ge.create_dataset("t_start", data=tt[:, 0].copy(), **gz)
-        ge.create_dataset("t_end", data=tt[:, 1].copy(), **gz)
-        ndep = n
+        ndep = 0
+        for gname, etag in (("edep", args.edep_tag), ("edep_sce", args.edep_sce_tag)):
+            if not etag:
+                continue
+            n = rd.loadEnergyDeposits(*tag(etag))
+            tid, pdg, ne, nph = [np.zeros(n, dtype=np.int32) for _ in range(4)]
+            en = np.zeros(n, dtype=np.float32)
+            st = np.zeros((n, 3), dtype=np.float32); ed = np.zeros((n, 3), dtype=np.float32)
+            tt = np.zeros((n, 2), dtype=np.float64)
+            rd.fillEnergyDeposits(*[addr(a) for a in (tid, pdg, ne, nph, en, st, ed, tt)])
+            ge = g.create_group(gname)
+            for name, a in (("track_id", tid), ("pdg", pdg), ("num_electrons", ne), ("num_photons", nph),
+                            ("energy", en), ("start_xyz", st), ("end_xyz", ed)):
+                ge.create_dataset(name, data=a, **gz)
+            ge.create_dataset("t_start", data=tt[:, 0].copy(), **gz)
+            ge.create_dataset("t_end", data=tt[:, 1].copy(), **gz)
+            ndep = n
 
         # ---- particles
         npart = 0
@@ -170,8 +202,8 @@ def main():
             npart = n
 
         nwritten += 1
-        print("entry %d run %d subrun %d event %d: rawdigit %d (%dx%d) wire %d simch IDE %d edep %d particles %d  [%.1fs]"
-              % (ie, rd.run(), rd.subrun(), rd.event(), nd, nch, nt, nw, nide, ndep, npart, time.time() - t0))
+        print("entry %d run %d subrun %d event %d: rawdigit %d (%dx%d) wire %d simch IDE %d edep %d particles %d badch %d  [%.1fs]"
+              % (ie, rd.run(), rd.subrun(), rd.event(), nd, nch, nt, nw, nide, ndep, npart, nbad, time.time() - t0))
         sys.stdout.flush()
 
     fout.attrs["nevents"] = nwritten

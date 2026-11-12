@@ -132,6 +132,19 @@ public:
     }
   }
 
+  // ---- std::vector<int> (WireCell channel masks: simnfspl1 badchannels / badmasks)
+  // returns the number of ints, or -1 if the product is not in the file
+  long long loadIntVector(std::string label, std::string inst, std::string proc) {
+    fInts = nullptr;
+    try {
+      fInts = fEv.getValidHandle<std::vector<int>>(art::InputTag(label, inst, proc)).product();
+    } catch (...) { return -1; }
+    return fInts->size();
+  }
+  void fillIntVector(ULong64_t out_) const {
+    if (fInts && !fInts->empty()) std::memcpy((int*)out_, fInts->data(), sizeof(int) * fInts->size());
+  }
+
   // ---- simb::MCParticle (+ MCTruth origin through the largeant Assns) ------
   long long loadParticles(std::string label, std::string inst, std::string proc) {
     art::InputTag tag(label, inst, proc);
@@ -200,13 +213,14 @@ public:
   }
 
 private:
-  void clear() { fRD = nullptr; fWire = nullptr; fSC = nullptr; fSED = nullptr; fMCP = nullptr; }
+  void clear() { fRD = nullptr; fWire = nullptr; fSC = nullptr; fSED = nullptr; fMCP = nullptr; fInts = nullptr; }
   gallery::Event fEv;
   const std::vector<raw::RawDigit>* fRD = nullptr;
   const std::vector<recob::Wire>* fWire = nullptr;
   const std::vector<sim::SimChannel>* fSC = nullptr;
   const std::vector<sim::SimEnergyDeposit>* fSED = nullptr;
   const std::vector<simb::MCParticle>* fMCP = nullptr;
+  const std::vector<int>* fInts = nullptr;
   unsigned fNch = 0, fNticks = 0, fWireNch = 0, fWireNticks = 0;
   std::vector<int> fOrigin, fTruthIdx;
   bool fHaveOrigin = false;

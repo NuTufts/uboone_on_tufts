@@ -8,7 +8,9 @@ them from a MicroBooNE LArSoft (art) file, for studies of 2D wire-plane encoders
 | `rawdigit` | `raw::RawDigit` | `driftWC:orig:Detsim` | simulated raw waveforms (field + electronics response, noise) |
 | `wire` | `recob::Wire` | `butcher::McRecoStage1` | deconvolved waveforms, for comparison |
 | `simch` | `sim::SimChannel` | `driftWC:simpleSC:Detsim` | ionization arriving at each wire: (channel, time, track, electrons) |
-| `edep` | `sim::SimEnergyDeposit` | `ionization::G4EDep` | 3D energy deposits with track ID |
+| `edep` | `sim::SimEnergyDeposit` | `largeant:TPCActive:G4EDep` | 3D energy deposits with track ID, **true** positions |
+| `edep_sce` | `sim::SimEnergyDeposit` | `ionization::G4EDep` | the same deposits (same row order) after `ShiftEdepSCE`: positions displaced by the space-charge map, electron counts after recombination. This is the input of the WireCell drift |
+| `chstatus` | `std::vector<int>` | `simnfspl1:badchannels` / `badmasks` (`McRecoStage1`) | dead-channel mask used by the signal processing |
 | `particles` | `simb::MCParticle` | `largeant::G4EDep` | lookup table for the track IDs |
 
 The input must be an art file that still has the detsim products (the `*_reco1.root`
@@ -29,7 +31,7 @@ bash run_extract_wireplane.sh <input_art.root> <output.h5> [extractor options]
 `uboonecode v08_00_00_40a_dl -q e17:prof` (override with `UBOONECODE_VERSION`,
 `UBOONECODE_QUAL`) and runs `extract_wireplane_h5.py`. Options: `-n`, `--start`,
 `--*-tag` to change input tags (`--wire-tag ''` / `--particle-tag ''` to skip),
-`--tdc-offset`, `--gzip`. About 16 s and 67 MB per event on the test file.
+`--tdc-offset`, `--gzip`. About 18 s and 80 MB per event on the test file.
 
 Check an output file (python3 with h5py + matplotlib, e.g. the pointcept container):
 
@@ -37,7 +39,16 @@ Check an output file (python3 with h5py + matplotlib, e.g. the pointcept contain
 python3 validate_wireplane_h5.py <output.h5> [-o plot_dir]
 ```
 
-Files: `wireplane_products.cxx` (gallery reader, compiled with ACLiC on first use
+Check how completely the energy deposits label the images (needs
+[pysbn-detinfo](https://github.com/NuTufts/pysbn-detinfo) with `project_to_image`; the
+default looks for a clone in `../external/pysbn-detinfo`, and for the detinfo data in
+`$PYSBN_DETINFO_PATH`, default `/cluster/tufts/wongjiradlab/larbys/detinfo`):
+
+```
+python3 check_edep_coverage.py <output.h5> [--plots plot_dir]
+```
+
+Files: `check_edep_coverage.py`, `wireplane_products.cxx` (gallery reader, compiled with ACLiC on first use
 into `build_<version>/`), `extract_wireplane_h5.py` (PyROOT driver, python 2.7),
 `run_extract_wireplane.sh`, `install_py27_h5py.sh`, `validate_wireplane_h5.py`.
 
@@ -62,9 +73,13 @@ One group per event, `event_%06d` (attrs `run`, `subrun`, `event`, `entry`):
 | `simch/x`, `y`, `z` | (N_IDE,) float32 | cm. **x is not the true drift position** (see below) |
 | `edep/track_id`, `pdg` | (N_dep,) int32 | Geant4 track that made the deposit |
 | `edep/energy` | (N_dep,) float32 | MeV |
-| `edep/num_electrons`, `num_photons` | (N_dep,) int32 | ionization electrons (after recombination) and scintillation photons |
-| `edep/start_xyz`, `end_xyz` | (N_dep, 3) float32 | cm, true position of the step |
+| `edep/num_electrons`, `num_photons` | (N_dep,) int32 | not filled at this stage (-1 / 0): take them from `edep_sce` |
+| `edep/start_xyz`, `end_xyz` | (N_dep, 3) float32 | cm, true position of the step (LArSoft world frame) |
 | `edep/t_start`, `t_end` | (N_dep,) float64 | ns, Geant4 time |
+| `edep_sce/*` | as `edep` | same rows; `start_xyz`, `end_xyz` displaced by space charge; `num_electrons` after recombination |
+| `chstatus/dead` | (8256,) uint8 | 1 = channel in the bad-channel list |
+| `chstatus/bad_channels` | (N_bad,) int32 | the list itself |
+| `chstatus/bad_masks` | (N_bad, 3) int32 | (channel, first tick, last tick) masked; the whole readout (0-9592) for every bad channel |
 | `particles/track_id`, `pdg`, `mother`, `status` | (N_part,) int32 | `mother` = 0 for primaries |
 | `particles/ancestor` | (N_part,) int32 | track ID of the primary at the top of the mother chain |
 | `particles/origin` | (N_part,) int32 | 1 = beam neutrino, 2 = cosmic (from the MCTruth) |
@@ -85,19 +100,20 @@ Conventions and things to know:
   SimChannel TDCs cover the full 9600-tick readout.
 * **SimChannel positions.** In the WireCell `simpleSC` SimChannels, `x` only takes
   ~10 discrete values between -0.6 and 0 cm (response/wire-plane positions); only
-  `y` and `z` are true deposit coordinates. For true 3D positions use `edep`
-  (join on track ID, or use `edep` x with SimChannel time).
+  `y` and `z` are deposit coordinates (after the space-charge displacement). For true
+  3D positions use `edep` and project it into the image (next section).
 * **Electron counts.** `simch/num_electrons` summed over a plane is the same for
-  all three planes and is ~57% of `edep/num_electrons` summed on the test event
-  (drift attenuation plus deposits outside the readout window; not broken down
-  further).
+  all three planes. On the test event 69.5% of the `edep_sce` electrons project inside
+  the 9600-tick readout (the rest are out-of-time cosmics), and the SimChannels hold
+  80.3% of those. The missing 20% is not broken down.
 * **Dead channels are not in the raw waveforms.** In `driftWC:orig` every channel
   has noise and essentially every channel with truth charge shows signal. The
-  detector's bad-channel list is applied later, in reconstruction: `wire/signal` has
-  no ROI on ~770 channels that have truth charge (blocks of 16, e.g. 4976-4991).
-  A channel-status mask is not extracted yet; until it is, channels with truth
-  charge and an all-zero `wire/signal` row are a usable proxy.
-* Noise differs by channel (RMS 0.8 to 24 ADC, median 2.9, including signal).
+  bad-channel list is applied in reconstruction: `wire/signal` is empty on every
+  channel of `chstatus/dead` (833 on the test event: 401 U, 98 V, 334 Y). To make
+  raw input with realistic dead channels, mask `rawdigit/adc` rows with
+  `chstatus/dead`. The list is the simulation's fixed list, taken from the
+  `simnfspl1` noise-filter output of the same event.
+* Noise differs by channel (sigma-clipped RMS about 1.5 to 2.5 ADC on most channels).
 
 ## Validation on the test file
 
@@ -111,3 +127,51 @@ Neutrino interaction region, raw / SimChannel truth / deconvolved per plane:
 One collection-plane channel:
 
 ![waveform](figures/event_000000_waveform_ch5749.png)
+
+## Projecting the energy deposits into the images; label completeness
+
+`check_edep_coverage.py` projects `edep` (true x, y, z, t) into (plane, tick, wire) with
+`pysbn_detinfo`'s `DetInfo.project_to_image`, which applies the space-charge
+displacement, the drift and the deposit time:
+
+```python
+from pysbn_detinfo import load
+di = load("uboone")
+mid = 0.5 * (edep["start_xyz"][:] + edep["end_xyz"][:]); t = 0.5 * (edep["t_start"][:] + edep["t_end"][:])
+pr = di.project_to_image(mid, t, tick_offset=10)      # +10 ticks: this WireCell simulation
+ch, raw_tick, ok = pr["channel"][:, plane], pr["row"][:, plane], pr["in_image"][:, plane]
+# raw_tick indexes rawdigit/adc columns; wire/signal column = raw_tick - 2400
+```
+
+Results on the test event ([full report](figures/event_000000_coverage_report.txt)):
+
+* **The projection is exact enough to label pixels.** The displaced positions equal the
+  simulation's own (`edep_sce`) to 1e-4 cm. Per-track charge centroids of the projected
+  deposits and of the SimChannels agree to 0.01 wire and 0.16 tick (spread), with a
+  constant offset of 10.1 ticks. Without the space-charge step the spread is 6-9 wires
+  (U, V) and 26 ticks.
+* **Coverage of the image by labels**: fraction of signal pixels with a projected deposit
+  within +-dw wires and +-dt ticks.
+
+  | signal pixels | label | exact pixel | +-1 wire, +-2 ticks | +-1, +-5 | +-2, +-10 |
+  | --- | --- | --- | --- | --- | --- |
+  | deconvolved > 5, live channels (V, Y) | edep | 0.51, 0.54 | 0.97, 0.97 | 0.999, 0.999 | 1.000, 1.000 |
+  | same | simch | 0.96, 0.96 | 0.998, 0.997 | 1.000, 1.000 | 1.000, 1.000 |
+  | deconvolved > 5 (U) | edep | 0.46 | 0.88 | 0.91 | 0.92 |
+  | raw, 5 sigma (U, V, Y) | edep | 0.21, 0.14, 0.32 | 0.64, 0.65, 0.80 | 0.80, 0.88, 0.91 | 0.93, 0.999, 0.997 |
+
+  The deposits are points; the image signal is wider (diffusion, field response, the
+  deconvolution filter), so exact-pixel coverage is about half and a few-pixel
+  neighbourhood is needed. SimChannel labels already include the diffusion. The raw
+  image needs a wider neighbourhood, mostly on the induction planes (bipolar,
+  long-range induced signals).
+* **The U deficit is one channel.** 4,500 of the 4,640 unlabeled U pixels are on channel
+  446, a single live channel inside a block of dead ones, where the deconvolution
+  returns one long ROI (ticks 400-6064, mean 19). Without it U matches V and Y.
+* **Label efficiency**: fraction of projected electrons (inside the deconvolved window)
+  with a signal pixel within +-1 wire, +-5 ticks: 0.92 / 0.96 / 0.98 (U / V / Y) on live
+  channels. 19% / 5.5% / 5.6% of the electrons project onto dead channels, so over all
+  channels it is 0.76 / 0.92 / 0.93. The rest on live channels is charge below the
+  deconvolution's ROI threshold.
+
+![coverage](figures/event_000000_edep_coverage.png)

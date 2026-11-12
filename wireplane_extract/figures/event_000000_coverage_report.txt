@@ -1,0 +1,63 @@
+file /cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/wireplane_extract/test_output/wireplane_test_nue.h5 event 0
+detinfo uboone v10_04_07_13 (simulation: uboonecode v08_00_00_40a_dl)
+deposits 579149   SimChannel IDEs 1206685   dead channels 833 (U 401, V 98, Y 334)
+
+== 1. projection check ==
+space-charge displacement (step start points): mean |shift| 1.27, 1.84, 0.34 cm; pysbn-detinfo minus the simulation's ShiftEdepSCE positions, max |d| = 7.6e-06, 3.8e-06, 6.1e-05 cm
+per-track charge centroid, SimChannel minus projected deposits (tracks with > 2e4 e-):
+  plane SCE       tracks     wire: median (IQR)         tick: median (IQR)
+  U     on           724        0.004 ( 0.005)            10.17 (  0.16)
+  U     off          727        1.132 ( 8.722)            29.79 ( 25.94)
+  V     on           723        0.003 ( 0.006)            10.09 (  0.16)
+  V     off          726       -1.113 ( 6.508)            29.72 ( 26.00)
+  Y     on           724        0.007 ( 0.005)            10.03 (  0.16)
+  Y     off          727       -0.052 ( 0.623)            29.66 ( 25.94)
+measured tick offset (SCE on): U 10.17  V 10.09  Y 10.03   [using --tick-offset 10.0]
+
+deposit electrons: 4.957e+08 total; inside the readout window and on a wire: U 0.695 V 0.695 Y 0.695
+SimChannel electrons / projected in-image deposit electrons: U 0.803  V 0.803  Y 0.803
+
+== 2. coverage: fraction of signal pixels with a label within +-dw wires, +-dt ticks ==
+(pixel fraction / amplitude-weighted fraction)
+
+deconvolved (wire/signal > 5, live channels): 215763 signal pixels (U 66893, V 76404, Y 72466)
+  label     dw x dt   U                 V                 Y                 all
+  edep      0x0       0.461 / 0.478     0.506 / 0.576     0.537 / 0.619     0.503 / 0.559  
+  edep      1x2       0.882 / 0.820     0.971 / 0.977     0.969 / 0.979     0.943 / 0.927  
+  edep      1x5       0.912 / 0.844     0.999 / 0.999     0.999 / 0.999     0.972 / 0.949  
+  edep      2x10      0.921 / 0.855     1.000 / 1.000     1.000 / 1.000     0.976 / 0.953  
+  edep      3x20      0.931 / 0.867     1.000 / 1.000     1.000 / 1.000     0.978 / 0.957  
+  edep      uncovered at 3x20: 4640 pixels; top channels (channel: pixels, noise RMS): 446: 4578, 1.9, 504: 14, 2.0, 338: 11, 1.7, 593: 8, 2.0, 599: 8, 2.0
+  simch     0x0       0.873 / 0.806     0.956 / 0.963     0.964 / 0.964     0.933 / 0.912  
+  simch     1x2       0.915 / 0.849     0.998 / 0.999     0.997 / 0.998     0.972 / 0.950  
+  simch     1x5       0.921 / 0.854     1.000 / 1.000     1.000 / 1.000     0.975 / 0.953  
+  simch     2x10      0.927 / 0.861     1.000 / 1.000     1.000 / 1.000     0.977 / 0.955  
+  simch     3x20      0.933 / 0.870     1.000 / 1.000     1.000 / 1.000     0.979 / 0.958  
+  simch     uncovered at 3x20: 4496 pixels; top channels (channel: pixels, noise RMS): 446: 4485, 1.9, 504: 7, 2.0, 599: 3, 2.0, 338: 1, 1.7
+
+raw (|adc - baseline| > 5 sigma, all channels): 505658 signal pixels (U 186864, V 155071, Y 163723)
+  label     dw x dt   U                 V                 Y                 all
+  edep      0x0       0.211 / 0.304     0.136 / 0.138     0.322 / 0.414     0.224 / 0.327  
+  edep      1x2       0.636 / 0.758     0.652 / 0.660     0.803 / 0.856     0.695 / 0.788  
+  edep      1x5       0.804 / 0.886     0.878 / 0.898     0.913 / 0.955     0.862 / 0.923  
+  edep      2x10      0.927 / 0.962     0.999 / 0.999     0.997 / 0.999     0.972 / 0.988  
+  edep      3x20      0.974 / 0.987     1.000 / 1.000     1.000 / 1.000     0.990 / 0.996  
+  edep      uncovered at 3x20: 4983 pixels; top channels (channel: pixels, noise RMS): 337: 55, 1.7, 338: 54, 1.7, 200: 53, 1.6, 339: 51, 1.7, 847: 50, 2.2
+  simch     0x0       0.692 / 0.789     0.764 / 0.766     0.849 / 0.886     0.765 / 0.833  
+  simch     1x2       0.860 / 0.918     0.950 / 0.950     0.960 / 0.975     0.920 / 0.953  
+  simch     1x5       0.903 / 0.948     0.987 / 0.989     0.988 / 0.993     0.956 / 0.978  
+  simch     2x10      0.949 / 0.974     0.996 / 0.997     0.996 / 0.997     0.979 / 0.990  
+  simch     3x20      0.977 / 0.989     0.997 / 0.997     0.997 / 0.997     0.990 / 0.995  
+  simch     uncovered at 3x20: 5260 pixels; top channels (channel: pixels, noise RMS): 200: 47, 1.6, 464: 43, 1.9, 847: 41, 2.2, 201: 40, 1.6, 337: 40, 1.7
+
+== 3. label efficiency: fraction of projected deposit electrons with a deconvolved signal pixel within +-dw, +-dt ==
+(deposits projected inside the deconvolved window, raw ticks 2400-8800)
+  dw x dt   U live / all channels      V live / all channels      Y live / all channels   
+  0x0       0.886 / 0.714              0.924 / 0.873              0.968 / 0.913           
+  1x2       0.911 / 0.754              0.960 / 0.913              0.975 / 0.928           
+  1x5       0.918 / 0.761              0.964 / 0.917              0.978 / 0.931           
+  2x10      0.930 / 0.785              0.970 / 0.927              0.980 / 0.939           
+  3x20      0.946 / 0.812              0.976 / 0.937              0.983 / 0.947           
+  electrons projected onto dead channels: U 0.194  V 0.055  Y 0.056
+
+wrote /cluster/tufts/wongjiradlabnu/twongj01/uboone_on_tufts/wireplane_extract/test_output/coverage_plots/event_000000_edep_coverage.png

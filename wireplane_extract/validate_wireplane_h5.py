@@ -142,7 +142,9 @@ def main():
               + ("; deconvolved has no ROI on %d of %d %s" % (nnoroi, nwin, _runs(np.array(noroi))) if have_wire else ""))
 
     # ---- electrons bookkeeping
-    etid = e["track_id"][:]; ene = e["num_electrons"][:].astype(np.float64)
+    etid = e["track_id"][:]
+    # electrons after recombination are in edep_sce (same rows); older files have them in edep
+    ene = (g["edep_sce"] if "edep_sce" in g else e)["num_electrons"][:].astype(np.float64)
     tot_e = ene.sum()
     print("\nelectrons: edep total %.4g" % tot_e)
     for ip, sl in enumerate(psl):
