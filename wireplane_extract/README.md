@@ -11,6 +11,7 @@ them from a MicroBooNE LArSoft (art) file, for studies of 2D wire-plane encoders
 | `edep` | `sim::SimEnergyDeposit` | `largeant:TPCActive:G4EDep` | 3D energy deposits with track ID, **true** positions |
 | `edep_sce` | `sim::SimEnergyDeposit` | `ionization::G4EDep` | the same deposits (same row order) after `ShiftEdepSCE`: positions displaced by the space-charge map, electron counts after recombination. This is the input of the WireCell drift |
 | `chstatus` | `std::vector<int>` | `simnfspl1:badchannels` / `badmasks` (`McRecoStage1`) | dead-channel mask used by the signal processing |
+| `opdet/<name>` | `raw::OpDetWaveform` | `pmtreadout:<instance>:Detsim`, `saturation:<instance>:McRecoStage1` | PMT waveforms: beam window and self-triggered windows, high and low gain |
 | `particles` | `simb::MCParticle` | `largeant::G4EDep` | lookup table for the track IDs |
 
 The input must be an art file that still has the detsim products (the `*_reco1.root`
@@ -31,7 +32,7 @@ bash run_extract_wireplane.sh <input_art.root> <output.h5> [extractor options]
 `uboonecode v08_00_00_40a_dl -q e17:prof` (override with `UBOONECODE_VERSION`,
 `UBOONECODE_QUAL`) and runs `extract_wireplane_h5.py`. Options: `-n`, `--start`,
 `--*-tag` to change input tags (`--wire-tag ''` / `--particle-tag ''` to skip),
-`--tdc-offset`, `--gzip`. About 18 s and 80 MB per event on the test file.
+`--tdc-offset`, `--gzip`. `--opdet-tags` (name=label:instance:process list; `''` to skip). About 18 s and 80 MB per event on the test file.
 
 Check an output file (python3 with h5py + matplotlib, e.g. the pointcept container):
 
@@ -48,7 +49,9 @@ default looks for a clone in `../external/pysbn-detinfo`, and for the detinfo da
 python3 check_edep_coverage.py <output.h5> [--plots plot_dir]
 ```
 
-Files: `check_edep_coverage.py`, `wireplane_products.cxx` (gallery reader, compiled with ACLiC on first use
+Summarize and plot the optical waveforms: `python3 check_opdet.py <output.h5> [--plots plot_dir]`.
+
+Files: `check_edep_coverage.py`, `check_opdet.py`, `wireplane_products.cxx` (gallery reader, compiled with ACLiC on first use
 into `build_<version>/`), `extract_wireplane_h5.py` (PyROOT driver, python 2.7),
 `run_extract_wireplane.sh`, `install_py27_h5py.sh`, `validate_wireplane_h5.py`.
 
@@ -80,6 +83,10 @@ One group per event, `event_%06d` (attrs `run`, `subrun`, `event`, `entry`):
 | `chstatus/dead` | (8256,) uint8 | 1 = channel in the bad-channel list |
 | `chstatus/bad_channels` | (N_bad,) int32 | the list itself |
 | `chstatus/bad_masks` | (N_bad, 3) int32 | (channel, first tick, last tick) masked; the whole readout (0-9592) for every bad channel |
+| `opdet/<name>/channel` | (N_wf,) int32 | readout channel; PMT = `channel % 100` (0-31) |
+| `opdet/<name>/timestamp` | (N_wf,) float64 | us, electronics time of the first sample. Trigger = 4050 us = Geant4 t = 0 |
+| `opdet/<name>/nsamples`, `offset` | (N_wf,) int32, int64 | waveform `i` is `adc[offset[i] : offset[i] + nsamples[i]]` |
+| `opdet/<name>/adc` | (sum of nsamples,) int16 | all waveforms concatenated; 15.625 ns per sample, baseline ~2048, 12 bit (saturates at 4095) |
 | `particles/track_id`, `pdg`, `mother`, `status` | (N_part,) int32 | `mother` = 0 for primaries |
 | `particles/ancestor` | (N_part,) int32 | track ID of the primary at the top of the mother chain |
 | `particles/origin` | (N_part,) int32 | 1 = beam neutrino, 2 = cosmic (from the MCTruth) |
@@ -113,6 +120,23 @@ Conventions and things to know:
   raw input with realistic dead channels, mask `rawdigit/adc` rows with
   `chstatus/dead`. The list is the simulation's fixed list, taken from the
   `simnfspl1` noise-filter output of the same event.
+* **Optical waveforms.** Two kinds of readout window, each in a high-gain and a
+  low-gain copy (the low-gain signal is about 10x smaller, for pulses that saturate
+  the high gain):
+
+  | group | product instance | channels | content on the test event |
+  | --- | --- | --- | --- |
+  | `beam_highgain` | `OpdetBeamHighGain` | 0-31 | one 1500-sample (23.4 us) window per PMT starting at the trigger |
+  | `beam_lowgain` | `OpdetBeamLowGain` | 100-131 | the same 32 beam windows at low gain, **plus** the low-gain self-triggered 40-sample windows (102) |
+  | `cosmic_highgain` | `OpdetCosmicHighGain` | 200-231 | self-triggered 40-sample (0.6 us) windows, 358, from -2.4 to +1.7 ms around the trigger |
+  | `cosmic_lowgain` | `OpdetCosmicLowGain` | | empty: this simulation files the low-gain self-triggered windows under `beam_lowgain`. Separate them by `nsamples` |
+  | `beam_satcorr`, `cosmic_satcorr` | `saturation:*` (reco) | 0-31, 200-231 | high gain with saturated pulses replaced by the scaled low gain (values can exceed 4095). 50 of 358 cosmic windows differ from the raw high gain; no beam window does |
+
+  Time of sample `k` relative to the trigger is `timestamp - 4050 + k * 0.015625` us,
+  and that is also the Geant4 time (`particles/t_start`, `edep/t_start`, in ns / 1000).
+  On the test event the summed beam-window light rises 0.03 us after the neutrino
+  interaction time. The logic-pulse products (`BNBLogicPulse` etc.) and the
+  reconstructed `OpHit` / `OpFlash` are not extracted.
 * Noise differs by channel (sigma-clipped RMS about 1.5 to 2.5 ADC on most channels).
 
 ## Validation on the test file
@@ -175,3 +199,7 @@ Results on the test event ([full report](figures/event_000000_coverage_report.tx
   deconvolution's ROI threshold.
 
 ![coverage](figures/event_000000_edep_coverage.png)
+
+## Optical waveforms on the test event
+
+![opdet](figures/event_000000_opdet.png)

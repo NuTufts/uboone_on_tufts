@@ -14,6 +14,7 @@ Products (defaults are the tags of the Tufts v08_00_00_40a_dl production):
                                                               after recombination (the WireCell drift input)
   chstatus   std::vector<int>         simnfspl1:badchannels / badmasks (McRecoStage1)  dead-channel mask
   particles  simb::MCParticle         largeant::G4EDep        track-ID lookup table
+  opdet      raw::OpDetWaveform       pmtreadout:<instance>:Detsim   PMT waveforms (see --opdet-tags)
 
 See README.md for the schema.
 """
@@ -28,6 +29,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # MicroBooNE channel layout (channel -> plane): U 0-2399, V 2400-4799, Y 4800-8255
 UB_PLANE_FIRST_CHANNEL = [0, 2400, 4800]
 UB_PLANE_NWIRES = [2400, 2400, 3456]
+
+
+# beam = one 1500-sample window per channel in time with the beam gate;
+# cosmic = short self-triggered windows; each in a high- and a low-gain copy.
+# *_satcorr = the reconstruction's merge of high and low gain (saturation correction).
+OPDET_DEFAULT = ",".join([
+    "beam_highgain=pmtreadout:OpdetBeamHighGain:Detsim",
+    "beam_lowgain=pmtreadout:OpdetBeamLowGain:Detsim",
+    "cosmic_highgain=pmtreadout:OpdetCosmicHighGain:Detsim",
+    "cosmic_lowgain=pmtreadout:OpdetCosmicLowGain:Detsim",
+    "beam_satcorr=saturation:OpdetBeamHighGain:McRecoStage1",
+    "cosmic_satcorr=saturation:OpdetCosmicHighGain:McRecoStage1",
+])
 
 
 def tag(s):
@@ -55,6 +69,9 @@ def main():
     ap.add_argument("--badch-tag", default="simnfspl1:badchannels:McRecoStage1", help="'' to skip")
     ap.add_argument("--badmask-tag", default="simnfspl1:badmasks:McRecoStage1", help="'' to skip")
     ap.add_argument("--particle-tag", default="largeant::G4EDep", help="'' to skip")
+    ap.add_argument("--opdet-tags", default=OPDET_DEFAULT,
+                    help="comma list of name=label:instance:process for raw::OpDetWaveform products "
+                         "written to opdet/<name>; '' to skip. Missing products are skipped")
     ap.add_argument("--tdc-offset", type=int, default=4900,
                     help="simch/tick = tdc - offset (RawDigit tick of the charge arrival). "
                          "4900 for the uboone MC clock settings; checked with validate_wireplane_h5.py")
@@ -87,6 +104,7 @@ def main():
     fout.attrs["edep_tag"] = args.edep_tag
     fout.attrs["edep_sce_tag"] = args.edep_sce_tag
     fout.attrs["badch_tag"] = args.badch_tag
+    fout.attrs["opdet_tags"] = args.opdet_tags
     fout.attrs["badmask_tag"] = args.badmask_tag
     fout.attrs["particle_tag"] = args.particle_tag
     fout.attrs["plane_first_channel"] = np.array(UB_PLANE_FIRST_CHANNEL, dtype=np.int32)
@@ -179,6 +197,28 @@ def main():
             ge.create_dataset("t_end", data=tt[:, 1].copy(), **gz)
             ndep = n
 
+        # ---- optical detector waveforms
+        nop = 0
+        for item in [v for v in args.opdet_tags.split(",") if v]:
+            oname, otag = item.split("=", 1)
+            n = rd.loadOpWaveforms(*tag(otag))
+            if n < 0:
+                continue
+            ns_tot = rd.nOpSamples()
+            och = np.zeros(n, dtype=np.int32); ons = np.zeros(n, dtype=np.int32)
+            ooff = np.zeros(n, dtype=np.int64); ots = np.zeros(n, dtype=np.float64)
+            oadc = np.zeros(max(ns_tot, 1), dtype=np.int16)
+            if n > 0:
+                rd.fillOpWaveforms(*[addr(a) for a in (och, ons, ooff, ots, oadc)])
+            go = g.require_group("opdet").create_group(oname)
+            go.attrs["tag"] = otag
+            go.create_dataset("channel", data=och)
+            go.create_dataset("nsamples", data=ons)
+            go.create_dataset("offset", data=ooff)
+            go.create_dataset("timestamp", data=ots)
+            go.create_dataset("adc", data=oadc[:ns_tot], **(gz if ns_tot > 0 else {}))
+            nop += n
+
         # ---- particles
         npart = 0
         if args.particle_tag:
@@ -202,8 +242,8 @@ def main():
             npart = n
 
         nwritten += 1
-        print("entry %d run %d subrun %d event %d: rawdigit %d (%dx%d) wire %d simch IDE %d edep %d particles %d badch %d  [%.1fs]"
-              % (ie, rd.run(), rd.subrun(), rd.event(), nd, nch, nt, nw, nide, ndep, npart, nbad, time.time() - t0))
+        print("entry %d run %d subrun %d event %d: rawdigit %d (%dx%d) wire %d simch IDE %d edep %d particles %d badch %d opwf %d  [%.1fs]"
+              % (ie, rd.run(), rd.subrun(), rd.event(), nd, nch, nt, nw, nide, ndep, npart, nbad, nop, time.time() - t0))
         sys.stdout.flush()
 
     fout.attrs["nevents"] = nwritten

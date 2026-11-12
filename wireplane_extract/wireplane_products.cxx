@@ -11,6 +11,7 @@
 #include "canvas/Persistency/Provenance/EventAuxiliary.h"
 #include "lardataobj/RawData/RawDigit.h"
 #include "lardataobj/RawData/raw.h"
+#include "lardataobj/RawData/OpDetWaveform.h"
 #include "lardataobj/RecoBase/Wire.h"
 #include "lardataobj/Simulation/SimChannel.h"
 #include "lardataobj/Simulation/SimEnergyDeposit.h"
@@ -145,6 +146,30 @@ public:
     if (fInts && !fInts->empty()) std::memcpy((int*)out_, fInts->data(), sizeof(int) * fInts->size());
   }
 
+  // ---- raw::OpDetWaveform (PMT readout windows of variable length) -------
+  // returns the number of waveforms, or -1 if the product is not in the file
+  long long loadOpWaveforms(std::string label, std::string inst, std::string proc) {
+    fOp = nullptr; fOpSamples = 0;
+    try {
+      fOp = fEv.getValidHandle<std::vector<raw::OpDetWaveform>>(art::InputTag(label, inst, proc)).product();
+    } catch (...) { return -1; }
+    for (auto const& w : *fOp) fOpSamples += w.size();
+    return fOp->size();
+  }
+  long long nOpSamples() const { return fOpSamples; }
+  // channel,nsamples: int32 [n]; offset: int64 [n] (start of the waveform in adc);
+  // timestamp: float64 [n] (us, electronics clock); adc: int16 [nOpSamples]
+  void fillOpWaveforms(ULong64_t ch_, ULong64_t ns_, ULong64_t off_, ULong64_t ts_, ULong64_t adc_) const {
+    int* ch = (int*)ch_; int* ns = (int*)ns_; long long* off = (long long*)off_;
+    double* ts = (double*)ts_; short* adc = (short*)adc_;
+    size_t i = 0; long long o = 0;
+    for (auto const& w : *fOp) {
+      ch[i] = w.ChannelNumber(); ns[i] = w.size(); off[i] = o; ts[i] = w.TimeStamp();
+      for (size_t k = 0; k < w.size(); ++k) adc[o + k] = (short)w[k];
+      o += w.size(); ++i;
+    }
+  }
+
   // ---- simb::MCParticle (+ MCTruth origin through the largeant Assns) ------
   long long loadParticles(std::string label, std::string inst, std::string proc) {
     art::InputTag tag(label, inst, proc);
@@ -213,7 +238,7 @@ public:
   }
 
 private:
-  void clear() { fRD = nullptr; fWire = nullptr; fSC = nullptr; fSED = nullptr; fMCP = nullptr; fInts = nullptr; }
+  void clear() { fRD = nullptr; fWire = nullptr; fSC = nullptr; fSED = nullptr; fMCP = nullptr; fInts = nullptr; fOp = nullptr; }
   gallery::Event fEv;
   const std::vector<raw::RawDigit>* fRD = nullptr;
   const std::vector<recob::Wire>* fWire = nullptr;
@@ -221,6 +246,8 @@ private:
   const std::vector<sim::SimEnergyDeposit>* fSED = nullptr;
   const std::vector<simb::MCParticle>* fMCP = nullptr;
   const std::vector<int>* fInts = nullptr;
+  const std::vector<raw::OpDetWaveform>* fOp = nullptr;
+  long long fOpSamples = 0;
   unsigned fNch = 0, fNticks = 0, fWireNch = 0, fWireNticks = 0;
   std::vector<int> fOrigin, fTruthIdx;
   bool fHaveOrigin = false;
